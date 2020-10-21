@@ -1,0 +1,6 @@
+munin-contrib (0.0.1-1) stretch; urgency=medium
+
+  * Initial package creation
+
+ -- Sven Schoradt <s.schoradt@infotec-edv.de>  Wed, 21 Oct 2020 13:53:20 +0200
+

@@ -1,0 +1,32 @@
+#! /usr/bin/make -f
+
+# for DEB_VERSION_UPSTREAM
+include /usr/share/dpkg/pkg-info.mk
+
+export DH_VERBOSE=1
+# Build.PL relies on the munin modules to be found locally
+export PERL5LIB=.
+
+MAKEOPTS = CONFIG=debian/Makefile.config INSTALL_PLUGINS="auto manual snmpauto contrib"
+
+%:
+	# --no-parallel was introduced with debhelper compat level 10
+	# (else it would fail to build) - this will probably also
+	# "fix"  #839233
+	dh $@ --no-parallel
+
+override_dh_auto_build:
+	# ./getversion reads RELEASE if it exists
+	echo "$(DEB_VERSION_UPSTREAM)" >RELEASE
+	dh_auto_build -- $(MAKEOPTS)
+
+override_dh_auto_install:
+	# Install the major munin parts into different packages
+	$(MAKE) install-plugins $(MAKEOPTS) \
+		DESTDIR=$(CURDIR)/debian/munin-contrib-plugins
+
+# "make clean" is being clever. Work around that. ;)
+override_dh_auto_clean:
+	dh_auto_clean -- $(MAKEOPTS) clean-plugins clean
+	find plugins/javalib -name '*.class' -print0 | xargs -0 -r rm -v
+	rm RELEASE -f
