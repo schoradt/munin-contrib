@@ -23,5 +23,6 @@ lint:
 install-plugins: 
 	mkdir -p $(LIBDIR)/plugins
 
-	$(INSTALL) -m 0644 plugins/solr/wfsolr_ $(LIBDIR)/plugins/
+	$(INSTALL) -m 0755 plugins/solr/solr8_ $(LIBDIR)/plugins/
+	
 

@@ -1,4 +1,10 @@
-munin-contrib (0.0.1-1) stretch; urgency=medium
+munin-contrib (0.2.0) stretch; urgency=medium
+
+  * Move solr monitoring into solr8_ plugin
+
+ -- Sven Schoradt <s.schoradt@infotec-edv.de>  Wed, 04 Nov 2020 14:55:54 +0100
+
+munin-contrib (0.1.0) stretch; urgency=medium
 
   * Initial package creation
 

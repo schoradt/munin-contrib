@@ -36,7 +36,7 @@ Vcs-Browser: https://github.com/schoradt/munin-contrib
 Package: munin-contrib-plugins
 Provides: munin-contrib-plugins
 Architecture: all
-Depends: ${perl:Depends}, ${misc:Depends}, munin-common (>= ${binary:Version})
+Depends: ${perl:Depends}, ${misc:Depends}, munin (>= 2.0.0)
 Recommends: libnet-snmp-perl
 Suggests:
  acpi | lm-sensors,
