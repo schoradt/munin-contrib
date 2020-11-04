@@ -1,3 +1,9 @@
+munin-contrib (0.3.0) stretch; urgency=medium
+
+  * FIX bug in dom support for old debian version
+
+ -- Sven Schoradt <s.schoradt@infotec-edv.de>  Wed, 04 Nov 2020 17:06:55 +0100
+
 munin-contrib (0.2.0) stretch; urgency=medium
 
   * Move solr monitoring into solr8_ plugin

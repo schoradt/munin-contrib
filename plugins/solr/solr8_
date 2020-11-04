@@ -184,7 +184,7 @@ function autoconfig() {
 
 function suggest() {
 	global $pathAliases;
-	
+
 	$url = getSolrAdminUrl()."/cores?action=STATUS&wt=xml";
 
 	$doc = new DOMDocument();
@@ -254,9 +254,7 @@ function measure($core, $category, $property, $item, $valueitem) {
 		$count = _countElements($element);
 
 		if ($count > 0) {
-			for ($i = 0; $i < $element->childNodes->count(); $i++) {
-				$c = $element->childNodes->item($i);
-
+			foreach($element->childNodes as $c) {
 				if(!($c instanceof \DomText)) {
 					if ($valueitem && $valueitem == $c->getAttribute('name')) {
 						echo $core . $item . $property . 'solr.value ' . wffloatval(trim($c->textContent)) . "\n";
