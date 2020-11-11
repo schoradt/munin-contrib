@@ -32,6 +32,7 @@ $category = null;
 $property = null;
 $item = null;
 $valueitem = null;
+$type = 'GAUGE';
 
 $prog = basename($argv[0]);
 $prog = preg_replace('/^solr8_/', '', $prog);
@@ -47,13 +48,15 @@ array_unshift($tabParams, 'solr8_');
 $tabParamsCount = count($tabParams);
 
 $pathAliases = array(
-	"numDocs" 						=> array("SEARCHER", "searcher", "numDocs"),
-	"requestTimes" 					=> array("QUERY", "/select", "requestTimes", "meanRate"),
-	"requests" 						=> array("QUERY", "/select", "requests"),
-	"errors" 						=> array("QUERY", "/select", "errors", "meanRate"),
-	"timeouts" 						=> array("QUERY", "/select", "timeouts", "meanRate"),
-	"indexSize" 					=> array("INDEX", "size"),
-	"updateTimes" 					=> array("UPDATE", "/update", "requestTimes", "meanRate"),
+	"requests" 						=> array('COUNTER', "QUERY", "/select", "requests"),
+	"errors" 						=> array('COUNTER', "QUERY", "/select", "errors", "count"),
+	"timeouts" 						=> array('COUNTER', "QUERY", "/select", "timeouts", "count"),
+
+	"numDocs" 						=> array('GAUGE', "SEARCHER", "searcher", "numDocs"),
+	"indexSize" 					=> array('GAUGE', "INDEX", "size"),
+
+	"requestTimes" 					=> array('GAUGE', "QUERY", "/select", "requestTimes", "meanRate"),
+	"updateTimes" 					=> array('GAUGE', "UPDATE", "/update", "requestTimes", "meanRate"),
 );
 
 if ($tabParamsCount == 5) {
@@ -70,7 +73,7 @@ if ($tabParamsCount == 5) {
 
 if (isset($pathAlias)) {
 	if (isset($pathAliases[$pathAlias])) {
-		list($category, $item, $property, $valueitem) = array_pad($pathAliases[$pathAlias], 4, null);
+		list($type, $category, $item, $property, $valueitem) = array_pad($pathAliases[$pathAlias], 5, null);
 	} else {
 		echo "Unknown alias: $pathAlias\n";
 
@@ -147,7 +150,7 @@ function wfGetUrl($url) {
 	return $content;
 }
 
-function configure($core, $category, $property, $item) {
+function configure($core, $category, $property, $item, $type) {
 	if ($property == "indexSize") {
 		echo "graph_args --base 1024 -l 0\n";
 	}
@@ -162,13 +165,21 @@ function configure($core, $category, $property, $item) {
 	echo "graph_title $category $itemName\n";
 	echo "graph_vlabel $itemName\n";
 
+	$fieldname = '';
+
 	if ($core !== null)	{
-		echo $core;
+		$fieldname .= $core;
 	} else {
-		echo "Default_core";
+		$fieldname .= "Default_core";
 	}
 
-	echo $item . $property . 'solr.label ' . $itemName . "\n";
+	$fieldname .= $item . $property . '_solr';
+
+	$fieldname = _cleanupFieldname($fieldname);
+
+	echo $fieldname . '.label ' . $itemName . "\n";
+	echo $fieldname . '.type ' . $type . "\n";
+	echo $fieldname . '.min 0' . "\n";
 }
 
 function autoconfig() {
@@ -226,6 +237,13 @@ function _countElements($element) {
 	return $count;
 }
 
+function _cleanupFieldname($fieldname) {
+	$fieldname = preg_replace('/^[^A-Za-z_]/', '_', $fieldname);
+	$fieldname = preg_replace('/[^A-Za-z0-9_]/', '_', $fieldname);
+
+	return $fieldname;
+}
+
 function measure($core, $category, $property, $item, $valueitem) {
 	if ($core === null) {
 		throw new Exception("No core defined", 0);
@@ -253,18 +271,22 @@ function measure($core, $category, $property, $item, $valueitem) {
 	foreach($elements as $element) {
 		$count = _countElements($element);
 
+		$fieldname = $core . $item . $property . '_solr';
+
+		$fieldname = _cleanupFieldname($fieldname);
+
 		if ($count > 0) {
 			foreach($element->childNodes as $c) {
 				if(!($c instanceof \DomText)) {
 					if ($valueitem && $valueitem == $c->getAttribute('name')) {
-						echo $core . $item . $property . 'solr.value ' . wffloatval(trim($c->textContent)) . "\n";
+						echo $fieldname . '.value ' . wffloatval(trim($c->textContent)) . "\n";
 					} else if (!$valueitem) {
-						echo $core . $item . $property . 'solr.'.$c->getAttribute('name').'.value ' . wffloatval(trim($c->textContent)) . "\n";
+						echo $fieldname . '.'.$c->getAttribute('name').'.value ' . wffloatval(trim($c->textContent)) . "\n";
 					}
 				}
 			}
 		} else {
-			echo $core . $item . $property . 'solr.value ' . wffloatval(trim($element->textContent)) . "\n";
+			echo $fieldname . '.value ' . wffloatval(trim($element->textContent)) . "\n";
 		}
 		
 		return;
@@ -275,7 +297,7 @@ function measure($core, $category, $property, $item, $valueitem) {
 
 try {
 	if ("config" == $action) {
-		configure($core, $category, $property, $item);
+		configure($core, $category, $property, $item, $type);
 
 	} elseif ("autoconf" == $action) {
 		autoconfig();
