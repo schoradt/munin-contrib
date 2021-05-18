@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 '''
 =head1 NAME
 
@@ -81,10 +81,11 @@ try:
     import stem
     import stem.control
     import stem.connection
-except ImportError:
+    missing_dependency_error = None
+except ImportError as exc:
     # missing dependencies are reported via "autoconf"
     # thus failure is acceptable here
-    pass
+    missing_dependency_error = str(exc)
 
 default_torcachefile = 'munin_tor_country_stats.json'
 default_torconnectmethod = 'port'
@@ -158,29 +159,24 @@ class TorPlugin(object):
                 print('{}.{} {}'.format(label, key, val))
 
     @staticmethod
-    def autoconf():
+    def get_autoconf_status():
         try:
             import stem
-
         except ImportError as e:
-            print('no (failed to import the required python module "stem": {})'.format(e))
-
+            return 'no (failed to import the required python module "stem": {})'.format(e)
         try:
             import GeoIP  # noqa: F401
-
         except ImportError as e:
-            print('no (failed to import the required python module "GeoIP": {})'.format(e))
-
+            return 'no (failed to import the required python module "GeoIP": {})'.format(e)
         try:
             with gen_controller() as controller:
                 try:
                     authenticate(controller)
-                    print('yes')
+                    return 'yes'
                 except stem.connection.AuthenticationFailure as e:
-                    print('no (Authentication failed: {})'.format(e))
-
-        except stem.connection:
-            print('no (Connection failed)')
+                    return 'no (Authentication failed: {})'.format(e)
+        except stem.SocketError:
+            return 'no (Connection failed)'
 
     @staticmethod
     def suggest():
@@ -313,15 +309,16 @@ class TorCountries(TorPlugin):
 
     def fetch(self):
         """Generate metrics"""
-
+        # Fallback if cache_dir_name is not set, unreadable or any other error
+        countries_num = self.top_countries()
         # If possible, read cached data instead of doing the processing twice
-        try:
-            with open(self.cache_dir_name) as f:
-                countries_num = json.load(f)
-        except (IOError, ValueError):
-            # Fallback if cache_dir_name is not set, unreadable or any other
-            # error
-            countries_num = self.top_countries()
+        if self.cache_dir_name:
+            try:
+                with open(self.cache_dir_name) as f:
+                    countries_num = json.load(f)
+            except (IOError, ValueError):
+                # use the fallback value above
+                pass
 
         for c, v in countries_num:
             print("%s.value %d" % (c, v))
@@ -516,12 +513,16 @@ def main():
         param = 'fetch'
 
     if param == 'autoconf':
-        TorPlugin.autoconf()
+        print(TorPlugin.get_autoconf_status())
         sys.exit()
     elif param == 'suggest':
         TorPlugin.suggest()
         sys.exit()
     else:
+        if missing_dependency_error is not None:
+            print("Failed to run tor_ due to missing dependency: {}"
+                  .format(missing_dependency_error), file=sys.stderr)
+            sys.exit(1)
         # detect data provider
         if __file__.endswith('_bandwidth'):
             provider = TorBandwidth()
